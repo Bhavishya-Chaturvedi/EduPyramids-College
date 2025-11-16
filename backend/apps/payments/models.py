@@ -22,14 +22,14 @@ class HDFCTransactionDetails(models.Model):
 
 class AcademicSubscription(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    academic = models.ForeignKey('events.AcademicCenter', on_delete=models.CASCADE)
+    academic_id = models.CharField(max_length=100, null=True, blank=True)  # Store academic center ID
     transaction = models.ForeignKey(HDFCTransactionDetails, on_delete=models.CASCADE)
     phone = models.CharField(max_length=20)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     expiry_date = models.DateField()
 
     def __str__(self):
-        return f"Subscription: {self.user.email} - {self.academic}"
+        return f"Subscription: {self.user.email} - {self.academic_id}"
 
 
 class PayeeHdfcTransaction(HDFCTransactionDetails):

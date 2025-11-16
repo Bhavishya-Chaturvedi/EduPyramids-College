@@ -29,7 +29,7 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.spoken",
     "apps.cms",
-    "apps.users"
+    "apps.users",
     "apps.payments",
 ]
 

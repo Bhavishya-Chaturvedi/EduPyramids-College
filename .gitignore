@@ -5,6 +5,7 @@ __pycache__/
 .env
 .venv/
 backend/venv/
+backend/env/
 # Django
 /staticfiles/
 media/

@@ -6,8 +6,6 @@ from django.http import JsonResponse
 from .models import AcademicSubscription, HDFCTransactionDetails, PayeeHdfcTransaction
 from .serializers import HDFCTransactionSerializer
 from .utils.hdfc_utils import generate_hashed_order_id, get_request_headers, poll_payment_status
-from events.models import AcademicCenter
-from donate.models import Payee
 from decimal import Decimal
 import requests
 
@@ -33,9 +31,10 @@ def create_academic_payment_session(request):
         "udf4": data.get('state')
     }
 
-    values = AcademicCenter.objects.filter(id__in=academic_ids).values('institution_name', 'academic_code')
-    payload["udf1"] = ' ** '.join([v['institution_name'] for v in values])[:90]
-    payload["udf2"] = ' ** '.join([v['academic_code'] for v in values])
+    # AcademicCenter lookup removed - module 'events' not available
+    # values = AcademicCenter.objects.filter(id__in=academic_ids).values('institution_name', 'academic_code')
+    # payload["udf1"] = ' ** '.join([v['institution_name'] for v in values])[:90]
+    # payload["udf2"] = ' ** '.join([v['academic_code'] for v in values])
 
     headers = get_request_headers(email)
     try:

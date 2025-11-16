@@ -9,7 +9,7 @@ class HDFCTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(AcademicSubscription)
 class AcademicSubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'academic', 'amount', 'expiry_date')
+    list_display = ('user', 'academic_id', 'amount', 'expiry_date')
 
 @admin.register(PayeeHdfcTransaction)
 class PayeeHdfcTransactionAdmin(admin.ModelAdmin):

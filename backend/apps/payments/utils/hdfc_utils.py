@@ -1,6 +1,6 @@
 import hashlib, time, base64, requests, hmac, urllib, json
 from django.conf import settings
-from payments.models import HDFCTransactionDetails
+from ..models import HDFCTransactionDetails
 
 def generate_hashed_order_id(email):
     data = f"{email}{int(time.time())}"
