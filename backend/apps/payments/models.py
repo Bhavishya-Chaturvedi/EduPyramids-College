@@ -12,6 +12,8 @@ class HDFCTransactionDetails(models.Model):
     udf3 = models.TextField(null=True, blank=True)
     udf4 = models.TextField(null=True, blank=True)
     udf5 = models.TextField(null=True, blank=True)
+    customer_email = models.EmailField(null=True, blank=True)
+    customer_phone = models.CharField(max_length=20, null=True, blank=True)
     error_code = models.CharField(max_length=50, null=True, blank=True)
     error_message = models.TextField(null=True, blank=True)
     date_created = models.DateTimeField(auto_now_add=True)

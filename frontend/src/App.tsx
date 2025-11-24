@@ -8,6 +8,7 @@ import DomainPage from "./pages/public/DomainsPage";
 import CoursePage from "./pages/public/CoursePage";
 import TutorialSearch from "./pages/public/TutorialSearch";
 import PaymentStatus from "./pages/public/PaymentStatus";
+import SubscriptionPage from "./pages/public/SubscriptionPage";
 
 
 export default function App(){
@@ -22,8 +23,9 @@ export default function App(){
           <Route path="/" element={<HomePage />} />
           <Route path="/domains" element={<DomainPage />} />
           <Route path="/tutorial-search" element={<TutorialSearch />} />
+          <Route path="/subscription" element={<SubscriptionPage />} />
           <Route path="/domains/:slug" element={<CoursePage />} />
-          <Route path="/payement-status" element={<PaymentStatus />} />
+          <Route path="/payment-status/:transactionId" element={<PaymentStatus />} />
           {/* catch-all for 404 */}
           <Route path="*" element={<h1>Page Not Found</h1>} />
         </Routes>

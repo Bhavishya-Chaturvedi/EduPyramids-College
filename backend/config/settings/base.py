@@ -155,11 +155,12 @@ PASSWORD_HASHERS = [
 ]
 
 
-HDFC_CONFIG = {
-    "MERCHANT_ID": os.getenv("MERCHANT_ID"),
-    "CLIENT_ID": os.getenv("CLIENT_ID"),
-    "RESPONSE_KEY": os.getenv("RESPONSE_KEY"),
-    "HDFC_API_URL": os.getenv("HDFC_API_URL"),
-    "HDFC_API_KEY": os.getenv("HDFC_API_KEY"),
-    "ORDER_STATUS_URL": os.getenv("ORDER_STATUS_URL"),
-}
+# HDFC settings 
+MERCHANT_ID = os.getenv("MERCHANT_ID")
+CLIENT_ID = os.getenv("CLIENT_ID")
+RESPONSE_KEY = os.getenv("RESPONSE_KEY")
+HDFC_API_URL = os.getenv("HDFC_API_URL")
+HDFC_API_KEY = os.getenv("HDFC_API_KEY")
+ORDER_STATUS_URL = os.getenv("ORDER_STATUS_URL")
+HDFC_POLL_MAX_RETRIES = int(os.getenv("HDFC_POLL_MAX_RETRIES", "5"))
+HDFC_POLL_INTERVAL = int(os.getenv("HDFC_POLL_INTERVAL", "2"))

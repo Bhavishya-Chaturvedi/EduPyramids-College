@@ -30,7 +30,6 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import PersonIcon from '@mui/icons-material/Person';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
 import BuildingIcon from '@mui/icons-material/Business';
 import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
 import HistoryIcon from '@mui/icons-material/History';
@@ -58,6 +57,67 @@ interface Transaction {
   order_status: string;
 }
 
+// Dummy data for states
+const DUMMY_STATES = [
+  { id: 1, name: 'Andhra Pradesh' },
+  { id: 2, name: 'Arunachal Pradesh' },
+  { id: 3, name: 'Assam' },
+  { id: 4, name: 'Bihar' },
+  { id: 5, name: 'Chhattisgarh' },
+  { id: 6, name: 'Goa' },
+  { id: 7, name: 'Gujarat' },
+  { id: 8, name: 'Haryana' },
+  { id: 9, name: 'Himachal Pradesh' },
+  { id: 10, name: 'Jharkhand' },
+  { id: 11, name: 'Karnataka' },
+  { id: 12, name: 'Kerala' },
+  { id: 13, name: 'Madhya Pradesh' },
+  { id: 14, name: 'Maharashtra' },
+  { id: 15, name: 'Manipur' },
+  { id: 16, name: 'Meghalaya' },
+  { id: 17, name: 'Mizoram' },
+  { id: 18, name: 'Nagaland' },
+  { id: 19, name: 'Odisha' },
+  { id: 20, name: 'Punjab' },
+  { id: 21, name: 'Rajasthan' },
+  { id: 22, name: 'Sikkim' },
+  { id: 23, name: 'Tamil Nadu' },
+  { id: 24, name: 'Telangana' },
+  { id: 25, name: 'Tripura' },
+  { id: 26, name: 'Uttar Pradesh' },
+  { id: 27, name: 'Uttarakhand' },
+  { id: 28, name: 'West Bengal' },
+];
+
+// Dummy data for academic centers per state
+const DUMMY_ACADEMIC_CENTERS: { [key: string]: AcademicCenter[] } = {
+  '1': [
+    { id: 101, academic_code: 'AP001', institution_name: 'Andhra University, Visakhapatnam' },
+    { id: 102, academic_code: 'AP002', institution_name: 'Sri Venkateswara University, Tirupati' },
+    { id: 103, academic_code: 'AP003', institution_name: 'Osmania University, Hyderabad' },
+  ],
+  '2': [
+    { id: 201, academic_code: 'AR001', institution_name: 'North Eastern University, Itanagar' },
+    { id: 202, academic_code: 'AR002', institution_name: 'Delhi Skill University, Arunachal Campus' },
+  ],
+  '3': [
+    { id: 301, academic_code: 'AS001', institution_name: 'Gauhati University, Guwahati' },
+    { id: 302, academic_code: 'AS002', institution_name: 'Dibrugarh University, Dibrugarh' },
+    { id: 303, academic_code: 'AS003', institution_name: 'Indian Institute of Technology Guwahati' },
+  ],
+  '14': [
+    { id: 1401, academic_code: 'MH001', institution_name: 'University of Mumbai, Mumbai' },
+    { id: 1402, academic_code: 'MH002', institution_name: 'Indian Institute of Technology Bombay' },
+    { id: 1403, academic_code: 'MH003', institution_name: 'Pune University, Pune' },
+    { id: 1404, academic_code: 'MH004', institution_name: 'NMIMS University, Mumbai' },
+  ],
+  '26': [
+    { id: 2601, academic_code: 'UP001', institution_name: 'University of Lucknow, Lucknow' },
+    { id: 2602, academic_code: 'UP002', institution_name: 'Indian Institute of Technology BHU, Varanasi' },
+    { id: 2603, academic_code: 'UP003', institution_name: 'Aligarh Muslim University, Aligarh' },
+  ],
+};
+
 const SubscriptionPage: React.FC = () => {
   const theme = useTheme();
   const [formData, setFormData] = useState({
@@ -69,21 +129,13 @@ const SubscriptionPage: React.FC = () => {
 
   const [selectedInstitutes, setSelectedInstitutes] = useState<number[]>([]);
   const [academicCenters, setAcademicCenters] = useState<AcademicCenter[]>([]);
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState<string>('');
   const [gstFields, setGSTFields] = useState<GSTFieldData>({});
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [loadingCenters, setLoadingCenters] = useState(false);
-  const [subscriptionAmount] = useState(5000); // Example amount
   const [userTransactions] = useState<Transaction[]>([]);
-  const [isAuthenticated] = useState(false); // This should come from your auth context
+  const [isAuthenticated] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
-
-  const states = [
-    { id: 1, name: 'Andhra Pradesh' },
-    { id: 2, name: 'Arunachal Pradesh' },
-    { id: 3, name: 'Assam' },
-    // Add more states as needed
-  ];
 
   useEffect(() => {
     if (formData.state) {
@@ -94,10 +146,9 @@ const SubscriptionPage: React.FC = () => {
   const fetchAcademicCenters = async (stateId: string) => {
     setLoadingCenters(true);
     try {
-      // Replace with your actual API endpoint
-      const response = await fetch(`/api/academic-centers/?stateId=${stateId}`);
-      const data = await response.json();
-      setAcademicCenters(data || []);
+      const dummyData = DUMMY_ACADEMIC_CENTERS[stateId] || [];
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setAcademicCenters(dummyData);
     } catch (error) {
       console.error('Error fetching academic centers:', error);
       setAcademicCenters([]);
@@ -107,7 +158,13 @@ const SubscriptionPage: React.FC = () => {
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
     const { name, value } = e.target as HTMLInputElement;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === 'amount') {
+      setAmount(value);
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -116,9 +173,7 @@ const SubscriptionPage: React.FC = () => {
   const handleInstituteChange = (e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
     const newSelected = e.target.value as number[];
     setSelectedInstitutes(newSelected);
-    setAmount(newSelected.length * subscriptionAmount);
 
-    // Initialize GST fields for each selected institute
     const newGSTFields: GSTFieldData = {};
     newSelected.forEach((id) => {
       if (!gstFields[id]) {
@@ -169,7 +224,10 @@ const SubscriptionPage: React.FC = () => {
       newErrors.institute = 'Please select at least one institute';
     }
 
-    // Validate GST fields
+    if (!amount || parseFloat(amount) <= 0) {
+      newErrors.amount = 'Payment amount must be greater than 0';
+    }
+
     selectedInstitutes.forEach((id) => {
       const gst = gstFields[id];
       if (gst && gst.wantGST === 'yes') {
@@ -195,19 +253,19 @@ const SubscriptionPage: React.FC = () => {
 
     setSubmitLoading(true);
     try {
-      // Prepare payment data
+      const stateName = DUMMY_STATES.find(s => s.id === parseInt(formData.state))?.name || formData.state;
+
       const paymentData = {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
-        state: formData.state,
-        institutes: selectedInstitutes,
-        amount,
+        state: stateName,
+        academic_ids: selectedInstitutes,
+        amount: parseFloat(amount),
         gst_data: gstFields,
       };
 
-      // Send to your payment API
-      const response = await fetch('/api/subscription/create-payment/', {
+      const response = await fetch('http://localhost:8000/api/payments/academic/session/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -215,17 +273,21 @@ const SubscriptionPage: React.FC = () => {
         body: JSON.stringify(paymentData),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create payment session');
+      }
+
       const data = await response.json();
-      if (data.success) {
-        // Handle successful payment initiation
-        alert('Payment initiated successfully');
-        // Redirect to payment gateway or handle response
+
+      if (data.payment_link) {
+        window.location.href = data.payment_link;
       } else {
-        alert('Error: ' + (data.error || 'Unknown error'));
+        alert('Payment link not received. Please try again.');
       }
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert('An error occurred. Please try again.');
+      alert(`Error: ${error instanceof Error ? error.message : 'An error occurred. Please try again.'}`);
     }
     setSubmitLoading(false);
   };
@@ -317,10 +379,9 @@ const SubscriptionPage: React.FC = () => {
                   value={formData.state}
                   onChange={handleFormChange as any}
                   label="State"
-                  startAdornment={<LocationOnIcon sx={{ mr: 1, color: 'action.active' }} />}
                 >
                   <MenuItem value="">-- Select State --</MenuItem>
-                  {states.map((state) => (
+                  {DUMMY_STATES.map((state) => (
                     <MenuItem key={state.id} value={state.id}>
                       {state.name}
                     </MenuItem>
@@ -366,10 +427,15 @@ const SubscriptionPage: React.FC = () => {
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 fullWidth
-                label="Amount"
+                label="Amount (₹)"
                 name="amount"
                 value={amount}
-                disabled
+                onChange={handleFormChange}
+                error={!!errors.amount}
+                helperText={errors.amount || 'Enter the payment amount in rupees'}
+                type="number"
+                placeholder="Enter amount"
+                inputProps={{ step: '1', min: '0' }}
                 InputProps={{
                   startAdornment: <CurrencyRupeeIcon sx={{ mr: 1, color: 'action.active' }} />,
                 }}
