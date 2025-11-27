@@ -37,3 +37,8 @@ class AcademicSubscription(models.Model):
 class PayeeHdfcTransaction(HDFCTransactionDetails):
     """Separate model for ILW/Payee-based payments."""
     pass
+
+class AcademicCenter(models.Model):
+    institution_name = models.CharField(max_length=255)
+    academic_code = models.CharField(max_length=50)
+    gst_number = models.CharField(max_length=20, null=True, blank=True)
