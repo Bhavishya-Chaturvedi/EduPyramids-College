@@ -17,8 +17,16 @@ interface PaymentData {
   udf1: string;
   udf2: string;
   udf4: string;
+  udf5: string;
   date_created: string;
   order_status: string;
+}
+
+interface GSTInfo {
+  institute_id: string;
+  want_gst: string;
+  gst_number: string;
+  gst_name: string;
 }
 
 type PaymentStatus = "CHARGED" | "FAILED" | "PENDING" | "TIMEOUT" | "ERROR";
@@ -77,6 +85,16 @@ export default function PaymentStatus() {
 
     fetchTransactionDetails();
   }, [transactionId]);
+
+  const parseGSTData = (): GSTInfo[] => {
+    if (!paymentData?.udf5) return [];
+    try {
+      return JSON.parse(paymentData.udf5);
+    } catch (error) {
+      console.error("Error parsing GST data:", error);
+      return [];
+    }
+  };
 
   return (
     <Container maxWidth="sm">
@@ -318,6 +336,50 @@ export default function PaymentStatus() {
                       primaryTypographyProps={{ fontWeight: 600, variant: "body2" }}
                     />
                   </ListItem>
+                  {paymentData.udf5 && (
+                    <>
+                      <ListItem disablePadding sx={{ pt: 2 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: BRAND.primary, width: "100%" }}>
+                          GST Invoice Information
+                        </Typography>
+                      </ListItem>
+                      {parseGSTData().map((gstItem, index) => (
+                        <Box key={index} sx={{ width: "100%", pl: 2, py: 1, borderLeft: `3px solid ${BRAND.borderColor}` }}>
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+                            Institute {index + 1}
+                          </Typography>
+                          <ListItem disablePadding sx={{ mb: 1 }}>
+                            <ListItemText
+                              primary="Want GST Invoice"
+                              secondary={gstItem.want_gst === 'yes' ? 'Yes' : 'No'}
+                              primaryTypographyProps={{ fontWeight: 600, variant: "caption" }}
+                              secondaryTypographyProps={{ variant: "caption" }}
+                            />
+                          </ListItem>
+                          {gstItem.want_gst === 'yes' && (
+                            <>
+                              <ListItem disablePadding sx={{ mb: 1 }}>
+                                <ListItemText
+                                  primary="GST Number"
+                                  secondary={gstItem.gst_number}
+                                  primaryTypographyProps={{ fontWeight: 600, variant: "caption" }}
+                                  secondaryTypographyProps={{ variant: "caption" }}
+                                />
+                              </ListItem>
+                              <ListItem disablePadding>
+                                <ListItemText
+                                  primary="GST Name"
+                                  secondary={gstItem.gst_name}
+                                  primaryTypographyProps={{ fontWeight: 600, variant: "caption" }}
+                                  secondaryTypographyProps={{ variant: "caption" }}
+                                />
+                              </ListItem>
+                            </>
+                          )}
+                        </Box>
+                      ))}
+                    </>
+                  )}
                 </List>
 
               {/* Action Buttons */}

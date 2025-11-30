@@ -38,6 +38,7 @@ interface AcademicCenter {
   id: number;
   academic_code: string;
   institution_name: string;
+  amount?: number;
 }
 
 interface GSTFieldData {
@@ -89,32 +90,32 @@ const DUMMY_STATES = [
   { id: 28, name: 'West Bengal' },
 ];
 
-// Dummy data for academic centers per state
+// Dummy data for academic centers per state with pre-populated amounts (15-20k range)
 const DUMMY_ACADEMIC_CENTERS: { [key: string]: AcademicCenter[] } = {
   '1': [
-    { id: 101, academic_code: 'AP001', institution_name: 'Andhra University, Visakhapatnam' },
-    { id: 102, academic_code: 'AP002', institution_name: 'Sri Venkateswara University, Tirupati' },
-    { id: 103, academic_code: 'AP003', institution_name: 'Osmania University, Hyderabad' },
+    { id: 101, academic_code: 'AP001', institution_name: 'Andhra University, Visakhapatnam', amount: 15000 },
+    { id: 102, academic_code: 'AP002', institution_name: 'Sri Venkateswara University, Tirupati', amount: 16500 },
+    { id: 103, academic_code: 'AP003', institution_name: 'Osmania University, Hyderabad', amount: 17500 },
   ],
   '2': [
-    { id: 201, academic_code: 'AR001', institution_name: 'North Eastern University, Itanagar' },
-    { id: 202, academic_code: 'AR002', institution_name: 'Delhi Skill University, Arunachal Campus' },
+    { id: 201, academic_code: 'AR001', institution_name: 'North Eastern University, Itanagar', amount: 15500 },
+    { id: 202, academic_code: 'AR002', institution_name: 'Delhi Skill University, Arunachal Campus', amount: 18000 },
   ],
   '3': [
-    { id: 301, academic_code: 'AS001', institution_name: 'Gauhati University, Guwahati' },
-    { id: 302, academic_code: 'AS002', institution_name: 'Dibrugarh University, Dibrugarh' },
-    { id: 303, academic_code: 'AS003', institution_name: 'Indian Institute of Technology Guwahati' },
+    { id: 301, academic_code: 'AS001', institution_name: 'Gauhati University, Guwahati', amount: 16000 },
+    { id: 302, academic_code: 'AS002', institution_name: 'Dibrugarh University, Dibrugarh', amount: 17000 },
+    { id: 303, academic_code: 'AS003', institution_name: 'Indian Institute of Technology Guwahati', amount: 19500 },
   ],
   '14': [
-    { id: 1401, academic_code: 'MH001', institution_name: 'University of Mumbai, Mumbai' },
-    { id: 1402, academic_code: 'MH002', institution_name: 'Indian Institute of Technology Bombay' },
-    { id: 1403, academic_code: 'MH003', institution_name: 'Pune University, Pune' },
-    { id: 1404, academic_code: 'MH004', institution_name: 'NMIMS University, Mumbai' },
+    { id: 1401, academic_code: 'MH001', institution_name: 'University of Mumbai, Mumbai', amount: 18500 },
+    { id: 1402, academic_code: 'MH002', institution_name: 'Indian Institute of Technology Bombay', amount: 20000 },
+    { id: 1403, academic_code: 'MH003', institution_name: 'Pune University, Pune', amount: 17000 },
+    { id: 1404, academic_code: 'MH004', institution_name: 'NMIMS University, Mumbai', amount: 19000 },
   ],
   '26': [
-    { id: 2601, academic_code: 'UP001', institution_name: 'University of Lucknow, Lucknow' },
-    { id: 2602, academic_code: 'UP002', institution_name: 'Indian Institute of Technology BHU, Varanasi' },
-    { id: 2603, academic_code: 'UP003', institution_name: 'Aligarh Muslim University, Aligarh' },
+    { id: 2601, academic_code: 'UP001', institution_name: 'University of Lucknow, Lucknow', amount: 15500 },
+    { id: 2602, academic_code: 'UP002', institution_name: 'Indian Institute of Technology BHU, Varanasi', amount: 19500 },
+    { id: 2603, academic_code: 'UP003', institution_name: 'Aligarh Muslim University, Aligarh', amount: 16500 },
   ],
 };
 
@@ -174,6 +175,19 @@ const SubscriptionPage: React.FC = () => {
     const newSelected = e.target.value as number[];
     setSelectedInstitutes(newSelected);
 
+    // Calculate total amount from selected institutes
+    let totalAmount = 0;
+    newSelected.forEach((id) => {
+      const institute = academicCenters.find((c) => c.id === id);
+      if (institute && institute.amount) {
+        totalAmount += institute.amount;
+      }
+    });
+
+    // Auto-populate amount field
+    setAmount(totalAmount > 0 ? totalAmount.toString() : '');
+
+    // Initialize GST fields for selected institutes
     const newGSTFields: GSTFieldData = {};
     newSelected.forEach((id) => {
       if (!gstFields[id]) {
@@ -255,6 +269,14 @@ const SubscriptionPage: React.FC = () => {
     try {
       const stateName = DUMMY_STATES.find(s => s.id === parseInt(formData.state))?.name || formData.state;
 
+      // Prepare GST data as JSON string for udf5
+      const gstDataForPayment = Object.entries(gstFields).map(([instituteId, gstInfo]) => ({
+        institute_id: instituteId,
+        want_gst: gstInfo.wantGST,
+        gst_number: gstInfo.gstNumber,
+        gst_name: gstInfo.gstName,
+      }));
+
       const paymentData = {
         name: formData.name,
         email: formData.email,
@@ -263,6 +285,7 @@ const SubscriptionPage: React.FC = () => {
         academic_ids: selectedInstitutes,
         amount: parseFloat(amount),
         gst_data: gstFields,
+        gst_json: JSON.stringify(gstDataForPayment), // For HDFC API udf5 field
       };
 
       const response = await fetch('http://localhost:8000/api/payments/academic/session/', {
@@ -432,9 +455,10 @@ const SubscriptionPage: React.FC = () => {
                 value={amount}
                 onChange={handleFormChange}
                 error={!!errors.amount}
-                helperText={errors.amount || 'Enter the payment amount in rupees'}
+                helperText={errors.amount || 'Auto-calculated based on selected institutes'}
                 type="number"
-                placeholder="Enter amount"
+                placeholder="Select institutes first"
+                disabled
                 inputProps={{ step: '1', min: '0' }}
                 InputProps={{
                   startAdornment: <CurrencyRupeeIcon sx={{ mr: 1, color: 'action.active' }} />,

@@ -8,6 +8,7 @@ from .serializers import HDFCTransactionSerializer
 from .utils.hdfc_utils import generate_hashed_order_id, get_request_headers, poll_payment_status
 from decimal import Decimal
 import requests
+from django.shortcuts import redirect
 
 @api_view(['POST'])
 def create_academic_payment_session(request):
@@ -16,6 +17,7 @@ def create_academic_payment_session(request):
     email = data.get('email')
     academic_ids = data.get('academic_ids', [])
     amount = data.get('amount')
+    gst_json = data.get('gst_json', '')  # GST data as JSON string
 
     payload = {
         "order_id": generate_hashed_order_id(email),
@@ -28,10 +30,11 @@ def create_academic_payment_session(request):
         "return_url": request.build_absolute_uri("/api/payments/callback-handler/"),
         "description": "Complete Academic Subscription Payment...",
         "udf3": data.get('name'),
-        "udf4": data.get('state')
+        "udf4": data.get('state'),
+        "udf5": gst_json,  # GST data for HDFC
     }
 
-    AcademicCenter lookup removed - module 'events' not available
+    # AcademicCenter lookup removed - module 'events' not available
     values = AcademicCenter.objects.filter(id__in=academic_ids).values('institution_name', 'academic_code')
     payload["udf1"] = ' ** '.join([v['institution_name'] for v in values])[:90]
     payload["udf2"] = ' ** '.join([v['academic_code'] for v in values])
@@ -52,7 +55,8 @@ def create_academic_payment_session(request):
                 customer_email=email,
                 customer_phone=data.get("phone"),
                 udf3=data.get('name'),
-                udf4=data.get('state')
+                udf4=data.get('state'),
+                udf5=gst_json,  # Store GST data in database
             )
             
             return Response({
