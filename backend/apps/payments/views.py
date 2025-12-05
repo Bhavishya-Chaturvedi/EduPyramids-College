@@ -3,12 +3,16 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
 from django.http import JsonResponse
-from .models import AcademicSubscription, HDFCTransactionDetails, PayeeHdfcTransaction, AcademicCenter
+from .models import AcademicSubscription, HDFCTransactionDetails, PayeeHdfcTransaction, AcademicCenter, AcademicSubscriptionDetail
 from .serializers import HDFCTransactionSerializer
 from .utils.hdfc_utils import generate_hashed_order_id, get_request_headers, poll_payment_status
 from decimal import Decimal
 import requests
 from django.shortcuts import redirect
+from django.utils import timezone
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 @api_view(['POST'])
 def create_academic_payment_session(request):
@@ -34,7 +38,11 @@ def create_academic_payment_session(request):
         "udf5": gst_json,  # GST data for HDFC
     }
 
+<<<<<<< HEAD
     # AcademicCenter lookup removed - module 'events' not available
+=======
+    #AcademicCenter lookup removed - module 'events' not available
+>>>>>>> 70ebc1e (AcademicSubscriptionDetail/payment_callback)
     values = AcademicCenter.objects.filter(id__in=academic_ids).values('institution_name', 'academic_code')
     payload["udf1"] = ' ** '.join([v['institution_name'] for v in values])[:90]
     payload["udf2"] = ' ** '.join([v['academic_code'] for v in values])
@@ -96,16 +104,146 @@ def get_transaction_details(request, transaction_id):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-
 @api_view(['POST'])
 def payment_callback(request):
-    data = request.data
-    
-    # validate checksum here
-    # verify amount/order_id
-    # update transaction model
+    """
+    Endpoint called by HDFC (or client) to post payment result.
+    - Verifies HMAC/signature when present
+    - Updates HDFCTransactionDetails record
+    - On success (CHARGED), attempt to create AcademicSubscription & AcademicSubscriptionDetail
+    """
+    raw = request.data or {}
+    # Prepare params in the form expected by verify_hmac_signature:
+    # the util expects values as lists (signature access uses [0]), so convert single values -> list
+    params_for_verify = {k: (v if isinstance(v, list) else [v]) for k, v in raw.items()}
 
-    return Response({"status": "received"})
+    # signature verification (if signature present in payload). If verification fails, we still log but mark transaction.
+    signature_ok = True
+    try:
+        if 'signature' in params_for_verify:
+            signature_ok = verify_hmac_signature(params_for_verify)
+    except Exception:
+        signature_ok = False
+
+    # Extract identifying fields - HDFC may send transaction id, order id or requestId
+    transaction_id = raw.get('transaction_id') or raw.get('id') or raw.get('txnId') or raw.get('txn_id') or raw.get('transactionId')
+    order_id = raw.get('order_id') or raw.get('orderId') or raw.get('orderid')
+    request_id = raw.get('requestId') or raw.get('request_id')
+
+    amount = raw.get('amount') or raw.get('txn_amount') or raw.get('amount_paid') or raw.get('txAmount')
+    status_field = raw.get('status') or raw.get('order_status') or raw.get('orderStatus') or raw.get('statusCode')
+
+    # Try to find existing transaction record by order_id or transaction_id or requestId
+    transaction = None
+    try:
+        if order_id:
+            transaction = HDFCTransactionDetails.objects.filter(order_id=order_id).first()
+        if not transaction and transaction_id:
+            transaction = HDFCTransactionDetails.objects.filter(transaction_id=transaction_id).first()
+        if not transaction and request_id:
+            transaction = HDFCTransactionDetails.objects.filter(requestId=request_id).first()
+    except Exception as e:
+        # unexpected DB issue; return 500
+        return Response({"error": "db_error", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # If no transaction found, create a minimal record (so we have a DB row to inspect)
+    if not transaction:
+        try:
+            transaction = HDFCTransactionDetails.objects.create(
+                transaction_id=transaction_id or generate_hashed_order_id("unknown"),
+                order_id=order_id or f"ORDER_{timezone.now().timestamp()}",
+                requestId=request_id,
+                amount=Decimal(amount) if amount else Decimal("0.00"),
+                order_status=status_field or ("UNKNOWN" if not signature_ok else "PENDING"),
+                customer_email=raw.get('customer_email') or raw.get('email'),
+                customer_phone=raw.get('customer_phone') or raw.get('phone'),
+                udf1=raw.get('udf1'),
+                udf2=raw.get('udf2'),
+                udf3=raw.get('udf3'),
+                udf4=raw.get('udf4'),
+                udf5=raw.get('udf5'),
+                error_message=None if signature_ok else "signature_verification_failed",
+            )
+        except Exception as e:
+            return Response({"error": "create_transaction_failed", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # Update transaction details from payload where present
+    try:
+        if amount:
+            # safe cast
+            try:
+                transaction.amount = Decimal(str(amount))
+            except Exception:
+                pass
+        if status_field:
+            transaction.order_status = status_field
+        if raw.get('error_code'):
+            transaction.error_code = raw.get('error_code')
+        if raw.get('error_message'):
+            transaction.error_message = raw.get('error_message')
+        # update customer fields
+        transaction.customer_email = raw.get('customer_email') or raw.get('email') or transaction.customer_email
+        transaction.customer_phone = raw.get('customer_phone') or raw.get('phone') or transaction.customer_phone
+        # store requestId if provided
+        if request_id:
+            transaction.requestId = request_id
+        transaction.save()
+    except Exception as e:
+        return Response({"error": "update_failed", "message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # If payment successful, attempt to create subscription record(s)
+    # Common HDFC success state name used in your utils: 'CHARGED'
+    success_states = {"CHARGED", "SUCCESS", "COMPLETED", "OK"}
+    if str(transaction.order_status).upper() in success_states:
+        # parse academic id(s) from udf2 or udf1 or custom field. Adjust as per your payload contract
+        academic_id = None
+        # udf2 in create_academic_payment_session was academic_code joined
+        if transaction.udf2:
+            academic_id = transaction.udf2.split(' ** ')[0] if isinstance(transaction.udf2, str) else transaction.udf2
+
+        user = None
+        email = transaction.customer_email
+        if email:
+            try:
+                user = User.objects.filter(email__iexact=email).first()
+            except Exception:
+                user = None
+
+        # Only create a subscription if we can find a user (db integrity requires user)
+        if user:
+            try:
+                # expiry: default 1 year from now if not provided in any payload
+                expiry_date = None
+                if raw.get('expiry_date'):
+                    expiry_date = raw.get('expiry_date')
+                else:
+                    expiry_date = (timezone.now().date().replace(day=1) + timezone.timedelta(days=365))
+
+                # Create or update subscription; simplistic approach: always create a new subscription row
+                subscription = AcademicSubscription.objects.create(
+                    user=user,
+                    academic_id=academic_id,
+                    transaction=transaction,
+                    phone=transaction.customer_phone or "",
+                    amount=transaction.amount or Decimal('0.00'),
+                    expiry_date=expiry_date
+                )
+
+                # Add a subscription detail / history record
+                AcademicSubscriptionDetail.objects.create(
+                    subscription=subscription,
+                    start_date=timezone.now().date(),
+                    end_date=subscription.expiry_date,
+                    is_active=True,
+                    note=f"Created from HDFC callback. txn={transaction.transaction_id}"
+                )
+            except Exception as e:
+                # don't fail the whole callback if subscription creation fails; log the error in transaction
+                transaction.error_message = (transaction.error_message or "") + f" | subscription_creation_failed: {str(e)}"
+                transaction.save()
+
+    # Successful receipt acknowledgement for gateway
+    return Response({"status": "received", "verified": signature_ok})
 
 
 @api_view(['GET', 'POST'])
