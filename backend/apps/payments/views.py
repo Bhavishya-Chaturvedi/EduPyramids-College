@@ -39,7 +39,11 @@ def create_academic_payment_session(request):
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     # AcademicCenter lookup removed - module 'events' not available
+=======
+    #AcademicCenter lookup removed - module 'events' not available
+>>>>>>> 70ebc1e (AcademicSubscriptionDetail/payment_callback)
 =======
     #AcademicCenter lookup removed - module 'events' not available
 >>>>>>> 70ebc1e (AcademicSubscriptionDetail/payment_callback)
