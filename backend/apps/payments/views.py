@@ -38,15 +38,8 @@ def create_academic_payment_session(request):
         "udf5": gst_json,  # GST data for HDFC
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-    # AcademicCenter lookup removed - module 'events' not available
-=======
     #AcademicCenter lookup removed - module 'events' not available
->>>>>>> 70ebc1e (AcademicSubscriptionDetail/payment_callback)
-=======
-    #AcademicCenter lookup removed - module 'events' not available
->>>>>>> 70ebc1e (AcademicSubscriptionDetail/payment_callback)
+    (AcademicSubscriptionDetail/payment_callback)
     values = AcademicCenter.objects.filter(id__in=academic_ids).values('institution_name', 'academic_code')
     payload["udf1"] = ' ** '.join([v['institution_name'] for v in values])[:90]
     payload["udf2"] = ' ** '.join([v['academic_code'] for v in values])
